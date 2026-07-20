@@ -1,0 +1,20 @@
+├─ front@0.0.0
+│  ├─ licenses: [1m[31mUNLICENSED[39m[22m
+│  ├─ private: true
+│  ├─ path: C:\Users\kouad\PycharmProjects\husen\front
+│  └─ licenseFile: C:\Users\kouad\PycharmProjects\husen\front\README.md
+├─ react-dom@19.2.7
+│  ├─ licenses: MIT
+│  ├─ repository: https://github.com/facebook/react
+│  ├─ path: C:\Users\kouad\PycharmProjects\husen\front\node_modules\react-dom
+│  └─ licenseFile: C:\Users\kouad\PycharmProjects\husen\front\node_modules\react-dom\LICENSE
+├─ react@19.2.7
+│  ├─ licenses: MIT
+│  ├─ repository: https://github.com/facebook/react
+│  ├─ path: C:\Users\kouad\PycharmProjects\husen\front\node_modules\react
+│  └─ licenseFile: C:\Users\kouad\PycharmProjects\husen\front\node_modules\react\LICENSE
+└─ scheduler@0.27.0
+   ├─ licenses: MIT
+   ├─ repository: https://github.com/facebook/react
+   ├─ path: C:\Users\kouad\PycharmProjects\husen\front\node_modules\.pnpm\react-dom@19.2.7_react@19.2.7\node_modules\scheduler
+   └─ licenseFile: C:\Users\kouad\PycharmProjects\husen\front\node_modules\.pnpm\react-dom@19.2.7_react@19.2.7\node_modules\scheduler\LICENSE
