@@ -1,19 +1,22 @@
 from authlib.integrations.base_client.errors import MismatchingStateError,OAuthError
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, HTTPException, Depends,Cookie,Response
 from sqlmodel import Session, select
 from back.db.database import get_session
 from back.auth.oauth import oauth
 from back.db.auth_user_db import User,Auth
 from back.db.auth_user_db import datetime_now
-
+import back.auth.jwt as jwt
+from back.auth.jwt import EXP_HOURS,token_give
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+COOKIE_NAME = "access_token"
 
 @router.get("/google")
 async def google_login(request: Request):
     return await oauth.google.authorize_redirect(request, redirect_uri="http://localhost:8000/auth/google/callback")
 
 @router.get("/google/callback")
-async def google_login_callback(request: Request,session: Session = Depends(get_session)):
+async def google_login_callback(request: Request,response:Response,session: Session = Depends(get_session)):
     try:
         token = await oauth.google.authorize_access_token(request)
     except (MismatchingStateError,OAuthError):
@@ -28,7 +31,8 @@ async def google_login_callback(request: Request,session: Session = Depends(get_
         auth.last_login_at =datetime_now()
         session.add(auth)
         session.commit()
-        return 201
+        token_give(auth,request,response)
+        return {"message": "success"}
     else:
         user=User(username=userinfo.get("name"))
         session.add(user)
@@ -42,14 +46,15 @@ async def google_login_callback(request: Request,session: Session = Depends(get_
         )
         session.add(auth)
         session.commit()
-        return 200
+        token_give(auth,request,response)
+        return {"message": "success"}
 
 @router.get("/github")
 async def github_login(request: Request):
     return await oauth.github.authorize_redirect(request, redirect_uri="http://localhost:8000/auth/github/callback")
 
 @router.get("/github/callback")
-async def github_login_callback(request: Request,session: Session = Depends(get_session)):
+async def github_login_callback(request: Request,response:Response,session: Session = Depends(get_session)):
     try:
         token = await oauth.github.authorize_access_token(request)
     except (MismatchingStateError,OAuthError):
@@ -67,7 +72,8 @@ async def github_login_callback(request: Request,session: Session = Depends(get_
         auth.last_login_at = datetime_now()
         session.add(auth)
         session.commit()
-        return 201
+        token_give(auth,request,response)
+        return {"message": "success"}
     else:
         user=User(username=userinfo.get("name") or userinfo.get("login"),)
         session.add(user)
@@ -80,4 +86,6 @@ async def github_login_callback(request: Request,session: Session = Depends(get_
         )
         session.add(auth)
         session.commit()
-    return 200
+        token_give(auth,request,response)
+        return {"message": "success"}
+

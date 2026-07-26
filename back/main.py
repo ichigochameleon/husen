@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from starlette.middleware.sessions import SessionMiddleware
 import os
+
+from back.auth.jwt import get_user_id_from_token
 from back.db.husen_memo_db import (
     Project,
     Memo,
@@ -16,7 +18,7 @@ from back.db.husen_memo_db import (
     MemoRes,
     ProjectRes,
 )
-from auth.router import router as auth_router
+from back.auth.router import router as auth_router
 from back.db.database import create_db, get_session
 
 load_dotenv()
@@ -137,7 +139,7 @@ def update_project_memo(
 
 
 @app.delete("/memos/{memo_id}", tags=["memos"])
-def delete_project_memo(memo_id: int, session: Session = Depends(get_session)):
+def delete_project_memo(memo_id: int, session: Session = Depends(get_session),):
     memo = session.get(Memo, memo_id)
     if not memo:
         raise HTTPException(status_code=404, detail="Project or Memo not found")

@@ -1,6 +1,6 @@
 from typing import List, Optional
 from sqlmodel import Field,SQLModel,JSON, Relationship
-
+from back.db.auth_user_db import User
 
 
 class Project(SQLModel, table=True):
@@ -13,6 +13,7 @@ class Project(SQLModel, table=True):
     mainrepo_url: Optional[str] = None
     others_url: List[str] = Field(default_factory=list, sa_type=JSON)
     memos: List["Memo"] = Relationship(back_populates="project")
+    user_id: int = Field(default=None, foreign_key="user.id")
 
 
 class Memo(SQLModel, table=True):
@@ -25,7 +26,7 @@ class Memo(SQLModel, table=True):
     text: Optional[str] = None
     project_id: Optional[int] = Field(default=None, foreign_key="project.id")
     project: Optional[Project] = Relationship(back_populates="memos")
-
+    user_id: int = Field(default=None, foreign_key="user.id")
 
 class ProjectCreate(SQLModel):
     name: str
@@ -33,6 +34,7 @@ class ProjectCreate(SQLModel):
     mainchat_url: Optional[str] = None
     mainrepo_url: Optional[str] = None
     others_url: List[str] = Field(default_factory=list)
+    user_id: int = Field(default=None, foreign_key="user.id")
 
 
 class MemoCreate(SQLModel):
@@ -40,7 +42,7 @@ class MemoCreate(SQLModel):
     kinds: Optional[int] = None
     others_kinds: Optional[str] = None
     text: Optional[str] = None
-
+    user_id: int = Field(default=None, foreign_key="user.id")
 
 class MemoUpdate(SQLModel):
     name: Optional[str] = None
@@ -64,6 +66,7 @@ class MemoRes(SQLModel):
     others_kinds: Optional[str] = None
     text: Optional[str] = None
     project_id: Optional[int] = None
+    user_id: int = Field(default=None, foreign_key="user.id")
 
 
 class ProjectRes(SQLModel):
@@ -74,3 +77,4 @@ class ProjectRes(SQLModel):
     mainrepo_url: Optional[str] = None
     others_url: List[str] = Field(default_factory=list)
     memos: List[MemoRes] = Field(default_factory=list)
+    user_id: int = Field(default=None, foreign_key="user.id")
