@@ -1,9 +1,8 @@
 from typing import List
 from fastapi import FastAPI, Depends, HTTPException
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session,select
 from sqlalchemy.orm import selectinload
 from fastapi.middleware.cors import CORSMiddleware
-from pathlib import Path
 from dotenv import load_dotenv
 from starlette.middleware.sessions import SessionMiddleware
 import os
@@ -18,15 +17,9 @@ from back.db.husen_memo_db import (
     ProjectRes,
 )
 from auth.router import router as auth_router
+from back.db.database import create_db, get_session
 
 load_dotenv()
-
-sqlite_file_name = "banana.db"
-BASE_DIR = Path(__file__).resolve().parent
-sqlite_url = f"sqlite:///{BASE_DIR /'db'/'banana.db'}"
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
-
 
 origins = ["http://localhost", "http://localhost:8080", "http://localhost:5173"]
 
@@ -48,18 +41,9 @@ app.add_middleware(
 
 app.include_router(auth_router)
 
-def create_db():
-    SQLModel.metadata.create_all(engine)
-
-
 @app.on_event("startup")
 def start():
     create_db()
-
-
-def get_session():
-    with Session(engine) as session:
-        yield session
 
 
 @app.get("/projects/", response_model=List[ProjectRes],tags=["projects"])
