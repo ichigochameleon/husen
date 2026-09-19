@@ -1,15 +1,11 @@
 from authlib.integrations.base_client.errors import MismatchingStateError,OAuthError
-from fastapi import APIRouter, Request, HTTPException, Depends,Cookie,Response
+from fastapi import APIRouter, Request, HTTPException, Depends,Response
 from sqlmodel import Session, select
 from back.db.database import get_session
 from back.auth.oauth import oauth
-from back.db.auth_user_db import User,Auth
-from back.db.auth_user_db import datetime_now
-import back.auth.jwt as jwt
-from back.auth.jwt import EXP_HOURS,token_give
+from back.db.db_base import User,datetime_now,Auth
+from back.auth.jwt_tools import token_give
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-COOKIE_NAME = "access_token"
 
 @router.get("/google")
 async def google_login(request: Request):
@@ -31,7 +27,7 @@ async def google_login_callback(request: Request,response:Response,session: Sess
         auth.last_login_at =datetime_now()
         session.add(auth)
         session.commit()
-        token_give(auth,request,response)
+        token_give(auth,response)
         return {"message": "success"}
     else:
         user=User(username=userinfo.get("name"))
@@ -46,7 +42,8 @@ async def google_login_callback(request: Request,response:Response,session: Sess
         )
         session.add(auth)
         session.commit()
-        token_give(auth,request,response)
+        session.refresh(auth)
+        token_give(auth,response)
         return {"message": "success"}
 
 @router.get("/github")
@@ -72,7 +69,8 @@ async def github_login_callback(request: Request,response:Response,session: Sess
         auth.last_login_at = datetime_now()
         session.add(auth)
         session.commit()
-        token_give(auth,request,response)
+        session.refresh(auth)
+        token_give(auth,response)
         return {"message": "success"}
     else:
         user=User(username=userinfo.get("name") or userinfo.get("login"),)
@@ -85,7 +83,8 @@ async def github_login_callback(request: Request,response:Response,session: Sess
             provider_user_id=str(userinfo["id"]),
         )
         session.add(auth)
+        session.refresh(auth)
         session.commit()
-        token_give(auth,request,response)
+        token_give(auth,response)
         return {"message": "success"}
 
