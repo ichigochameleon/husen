@@ -13,16 +13,23 @@ class ProgressStatus(str, Enum):
     IN_PROGRESS = "途中結論"
     COMPLETED = "完了"
 
+#権限
+class ProjectPermission(str, Enum):
+    READ="read"
+    UPDATE="update"
+    DELETE="delete"
+
+class ProjectExit(str, Enum):
+    PRIVATE = "private"
+    PUBLIC = "public"
 
 class ProjectUserLinkBase(SQLModel):
     project_id: int = Field(foreign_key="project.id", ondelete="CASCADE")
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
-    role: str = Field(index=True, default="member")
-
+    permission:List[ProjectPermission] = Field(default_factory=list,sa_type=JSON)
 
 class ProjectUserLink(ProjectUserLinkBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-
 
 class UserBase(SQLModel):
     username: str = Field(index=True)
@@ -56,6 +63,7 @@ class User(UserBase, table=True):
     updated_at: datetime = Field(default_factory=datetime_now)
     active: bool = Field(default=True)
 
+
 class AuthBase(SQLModel):
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
     last_login_at: datetime = Field(default_factory=datetime_now)
@@ -76,6 +84,7 @@ class ProjectBase(SQLModel):
     mainrepo_url: Optional[str] = None
     others_url: List[str] = Field(default_factory=list, sa_type=JSON)
     status: ProgressStatus
+    project_exist:ProjectExit=Field(default=ProjectExit.PRIVATE)
 
 class ProjectCreate(ProjectBase):
     pass
@@ -90,12 +99,15 @@ class ProjectUpdate(SQLModel):
     mainrepo_url: Optional[str] = None
     others_url: Optional[List[str]] = None
     status: Optional[ProgressStatus] = None
+    project_exist: Optional[ProjectExit]= None
 
 class Project(ProjectBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
     users: List["User"] = Relationship(back_populates="projects", link_model=ProjectUserLink)
     memos: List["Memo"] = Relationship(back_populates="project")
+
+
 
 
 class MemoBase(SQLModel):
