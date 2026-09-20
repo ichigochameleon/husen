@@ -45,3 +45,29 @@ def check_project_delete_permission(project_id: int, user_id: int, session: Sess
         return True
 
     raise HTTPException(status_code=403, detail="You do not have delete permission for this project.")
+
+def check_project_manage_read_permission(project_id: int, user_id: int, session: Session):
+    link = check_project_permission(project_id, user_id, session)
+
+    if ProjectPermission.MANAGE_READ in link.permission:
+        return True
+
+    raise HTTPException(status_code=403, detail="You do not have manage_read permission for this project.")
+
+def check_project_manage_update_permission(project_id: int, user_id: int, session: Session):
+    link = check_project_permission(project_id, user_id, session)
+    if ProjectPermission.MANAGE_UPDATE in link.permission:
+        return True
+    raise HTTPException(status_code=403, detail="You do not have manage_update permission for this project.")
+
+def check_project_manage_delete_permission(project_id: int, user_id: int, session: Session):
+    link = check_project_permission(project_id, user_id, session)
+    if ProjectPermission.MANAGE_DELETE in link.permission:
+        return True
+    raise HTTPException(status_code=403, detail="You do not have manage_delete_permission for this project.")
+
+def check_project_owner_permission(project_id: int, user_id: int, session: Session):
+    link = check_project_permission(project_id, user_id, session)
+    if ProjectPermission.OWNER in link.permission:
+        return True
+    raise HTTPException(status_code=403, detail="You do not have owner permission for this project.")

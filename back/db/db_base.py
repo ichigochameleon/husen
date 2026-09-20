@@ -18,6 +18,10 @@ class ProjectPermission(str, Enum):
     READ="read"
     UPDATE="update"
     DELETE="delete"
+    MANAGE_READ="manage_read"
+    MANAGE_UPDATE="manage_update"
+    MANAGE_DELETE="manage_delete"
+    OWNER="owner"
 
 class ProjectExit(str, Enum):
     PRIVATE = "private"

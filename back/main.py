@@ -31,7 +31,8 @@ from back.permission import (
     check_project_permission,
     check_project_write_permission,
     check_project_delete_permission,
-    check_project_read_permission
+    check_project_read_permission, check_project_manage_read_permission, check_project_manage_update_permission,
+    check_project_manage_delete_permission, check_project_owner_permission
 )
 load_dotenv()
 
@@ -105,7 +106,11 @@ def create_project(project: ProjectCreate, session: Session = Depends(get_sessio
     link=ProjectUserLink(project_id=project_obj.id, user_id=current_user_id,permission=[
         ProjectPermission.READ,
         ProjectPermission.UPDATE,
-        ProjectPermission.DELETE
+        ProjectPermission.DELETE,
+        ProjectPermission.MANAGE_READ,
+        ProjectPermission.MANAGE_UPDATE,
+        ProjectPermission.MANAGE_DELETE,
+        ProjectPermission.OWNER
     ]
                          )
     session.add(link)
@@ -146,6 +151,82 @@ def delete_project(project_id: int, session: Session = Depends(get_session),curr
     session.delete(project)
     session.commit()
     return {"detail": "Project deleted"}
+
+def project_permission(permission_kind:ProjectPermission,project_id: int,assign_user_id:int, current_user_id: int, session: Session = Depends(get_session)):
+    project = session.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    match permission_kind:
+        case ProjectPermission.READ:
+            check_project_manage_read_permission(project_id, current_user_id, session)
+        case ProjectPermission.UPDATE:
+            check_project_manage_update_permission(project_id, current_user_id, session)
+        case ProjectPermission.DELETE:
+            check_project_manage_delete_permission(project_id, current_user_id, session)
+        case ProjectPermission.MANAGE_READ | ProjectPermission.MANAGE_UPDATE | ProjectPermission.MANAGE_DELETE:
+            check_project_owner_permission(project_id, current_user_id, session)
+
+    assign_user=session.get(User, assign_user_id)
+    if not assign_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    link = session.exec(select(ProjectUserLink).where(ProjectUserLink.user_id == assign_user_id,
+                                                      ProjectUserLink.project_id == project_id)).first()
+    if not link:
+        link = ProjectUserLink(project_id=project_id, user_id=assign_user_id,permission=[])
+        session.add(link)
+    match permission_kind:
+        case ProjectPermission.READ:
+            if ProjectPermission.READ in link.permission:
+                return {"detail": "Permission already read"}
+            link.permission.append(ProjectPermission.READ)
+        case ProjectPermission.UPDATE:
+            if ProjectPermission.UPDATE in link.permission:
+                return {"detail": "Permission already update"}
+            link.permission.append(ProjectPermission.UPDATE)
+        case ProjectPermission.DELETE:
+            if ProjectPermission.DELETE in link.permission:
+                return {"detail": "Permission already deleted"}
+            link.permission.append(ProjectPermission.DELETE)
+        case ProjectPermission.MANAGE_READ:
+            if ProjectPermission.MANAGE_READ in link.permission:
+                return {"detail": "Permission already read"}
+            link.permission.append(ProjectPermission.MANAGE_READ)
+        case ProjectPermission.MANAGE_UPDATE:
+            if ProjectPermission.MANAGE_UPDATE in link.permission:
+                return {"detail": "Permission already updated"}
+            link.permission.append(ProjectPermission.MANAGE_UPDATE)
+        case ProjectPermission.MANAGE_DELETE:
+            if ProjectPermission.MANAGE_DELETE in link.permission:
+                return {"detail": "Permission already deleted"}
+            link.permission.append(ProjectPermission.MANAGE_DELETE)
+
+    session.commit()
+    session.refresh(link)
+    return {"detail": "Project assigned"}
+
+@app.post("/projects/{project_id}/permission/read", tags=["projects"])
+def read_project_permission(project_id: int,assign_user_id:int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission(ProjectPermission.READ, project_id, assign_user_id,current_user_id, session)
+
+@app.post("/projects/{project_id}/permission/update", tags=["projects"])
+def update_project_permission(project_id: int,assign_user_id:int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission(ProjectPermission.UPDATE, project_id, assign_user_id, current_user_id,session)
+
+@app.post("/projects/{project_id}/permission/delete", tags=["projects"])
+def delete_project_permission(project_id: int,assign_user_id:int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission(ProjectPermission.DELETE, project_id, assign_user_id,current_user_id,session)
+
+@app.post("/projects/{project_id}/permission/manage_read", tags=["projects"])
+def manage_read_project_permission(project_id: int, assign_user_id: int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission(ProjectPermission.MANAGE_READ, project_id, assign_user_id,current_user_id,session)
+
+@app.post("/projects/{project_id}/permission/manage_update", tags=["projects"])
+def manage_update_project_permission(project_id: int, assign_user_id: int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission(ProjectPermission.MANAGE_UPDATE, project_id, assign_user_id,current_user_id,session)
+
+@app.post("/projects/{project_id}/permission/manage_delete", tags=["projects"])
+def manage_delete_project_permission(project_id: int, assign_user_id: int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission(ProjectPermission.MANAGE_DELETE, project_id, assign_user_id,current_user_id,session)
 
 
 @app.post("/projects/{project_id}/memos", response_model=MemoRead,tags=["memos"])
