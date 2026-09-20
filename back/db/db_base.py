@@ -110,7 +110,8 @@ class Project(ProjectBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
     users: List["User"] = Relationship(back_populates="projects", link_model=ProjectUserLink)
-    memos: List["Memo"] = Relationship(back_populates="project")
+    memos: List["Memo"] = Relationship(back_populates="project",sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+
 
 
 
@@ -144,7 +145,7 @@ class Memo(MemoBase, table=True):
 
     project: "Project" = Relationship(back_populates="memos")
     user: "User" = Relationship(back_populates="memos")
-    chats: List["Chat"] = Relationship(back_populates="memo")
+    chats: List["Chat"] = Relationship(back_populates="memo",sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
     created_at: datetime = Field(default_factory=datetime_now)
 

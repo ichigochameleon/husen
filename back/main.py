@@ -3,6 +3,7 @@ from sqlmodel import Session,select
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
+load_dotenv()
 from starlette.middleware.sessions import SessionMiddleware
 import os
 from typing import List
@@ -34,7 +35,7 @@ from back.permission import (
     check_project_read_permission, check_project_manage_read_permission, check_project_manage_update_permission,
     check_project_manage_delete_permission, check_project_owner_permission
 )
-load_dotenv()
+
 
 origins = ["http://localhost", "http://localhost:8080", "http://localhost:5173"]
 
@@ -176,7 +177,11 @@ def star_project(project_id: int, session: Session = Depends(get_session), curre
         session.add(link)
     if ProjectPermission.STAR in link.permission:
         return {"detail": "Project already starred"}
-    link.permission.append(ProjectPermission.STAR)
+    link.permission = [
+        *link.permission,
+        ProjectPermission.STAR
+    ]
+    #link.permission.append(ProjectPermission.STAR)
     session.commit()
     session.refresh(link)
     return {"detail": "Project starred"}
@@ -193,7 +198,12 @@ def unstar_project(project_id: int, session: Session = Depends(get_session), cur
         raise HTTPException(status_code=404, detail="Project not starred")
     if ProjectPermission.STAR not in link.permission:
         return {"detail": "Project not starred"}
-    link.permission.remove(ProjectPermission.STAR)
+    #link.permission.remove(ProjectPermission.STAR)
+    link.permission = [
+        permission
+        for permission in link.permission
+        if permission != ProjectPermission.STAR
+    ]
     session.commit()
     session.refresh(link)
     return {"detail": "Project unstarred"}
@@ -339,7 +349,6 @@ def update_project_permission_deprivation(project_id: int,assign_user_id:int, se
 @app.delete("/projects/{project_id}/permission/delete", tags=["projects"])
 def delete_project_permission_deprivation(project_id: int,assign_user_id:int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
     return project_permission_deprivation(ProjectPermission.DELETE, project_id, assign_user_id, current_user_id, session)
-
 
 @app.delete("/projects/{project_id}/permission/manage_read", tags=["projects"])
 def manage_read_project_permission_deprivation(project_id: int, assign_user_id: int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
