@@ -92,9 +92,20 @@ def delete_user(current_user_id=Depends(get_user_id_from_token), session: Sessio
     return {"detail": "User deleted"}
 
 
-@app.get("/projects/", response_model=List[ProjectRead],tags=["projects"])
-def read_projects(session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
-    statement = select(Project).join(ProjectUserLink).where(ProjectUserLink.user_id == current_user_id)
+@app.get("/projects/", response_model=List[ProjectRead], tags=["projects"])
+def read_projects(
+    session: Session = Depends(get_session),
+    current_user_id=Depends(get_user_id_from_token)
+):
+    statement = (
+        select(Project)
+        .join(ProjectUserLink)
+        .where(
+            ProjectUserLink.user_id == current_user_id,
+            ProjectUserLink.permission != []
+        )
+    )
+
     projects = session.exec(statement).all()
     return projects
 
@@ -152,7 +163,65 @@ def delete_project(project_id: int, session: Session = Depends(get_session),curr
     session.commit()
     return {"detail": "Project deleted"}
 
-def project_permission(permission_kind:ProjectPermission,project_id: int,assign_user_id:int, current_user_id: int, session: Session = Depends(get_session)):
+@app.post("/projects/{project_id}/star", tags=["projects"])
+def star_project(project_id: int, session: Session = Depends(get_session), current_user_id=Depends(get_user_id_from_token)):
+    project = session.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_read_permission(project_id, current_user_id, session)
+    link = session.exec(select(ProjectUserLink).where(ProjectUserLink.user_id == current_user_id,
+                                                      ProjectUserLink.project_id == project_id)).first()
+    if not link:
+        link = ProjectUserLink(project_id=project_id, user_id=current_user_id,permission=[])
+        session.add(link)
+    if ProjectPermission.STAR in link.permission:
+        return {"detail": "Project already starred"}
+    link.permission.append(ProjectPermission.STAR)
+    session.commit()
+    session.refresh(link)
+    return {"detail": "Project starred"}
+
+@app.delete("/projects/{project_id}/star", tags=["projects"])
+def unstar_project(project_id: int, session: Session = Depends(get_session), current_user_id=Depends(get_user_id_from_token)):
+    project = session.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_read_permission(project_id, current_user_id, session)
+    link = session.exec(select(ProjectUserLink).where(ProjectUserLink.user_id == current_user_id,
+                                                      ProjectUserLink.project_id == project_id)).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Project not starred")
+    if ProjectPermission.STAR not in link.permission:
+        return {"detail": "Project not starred"}
+    link.permission.remove(ProjectPermission.STAR)
+    session.commit()
+    session.refresh(link)
+    return {"detail": "Project unstarred"}
+
+@app.get("/projects/{project_id}/permissions",tags=["projects"])
+def read_project_permissions(project_id: int, session: Session = Depends(get_session), current_user_id=Depends(get_user_id_from_token)):
+    project = session.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    link = session.exec(select(ProjectUserLink).where(ProjectUserLink.project_id == project_id, ProjectUserLink.user_id == current_user_id)).first()
+    if not link:
+        return {"permissions": []}
+    return {"permissions": link.permission}
+
+@app.get("/projects/{project_id}/other_permissions",tags=["projects"])
+def read_project_other_permissions(project_id: int, assign_user_id:int, session: Session = Depends(get_session), current_user_id=Depends(get_user_id_from_token),):
+    project = session.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if current_user_id == assign_user_id:
+        return RedirectResponse(url=f"/projects/{project_id}/permissions", status_code=302)
+    link = session.exec(select(ProjectUserLink).where(ProjectUserLink.project_id == project_id, ProjectUserLink.user_id == assign_user_id)).first()
+    if not link:
+        return {"permissions": []}
+    return {"permissions": link.permission}
+
+
+def project_permission_give(permission_kind:ProjectPermission, project_id: int, assign_user_id:int, current_user_id: int, session: Session = Depends(get_session)):
     project = session.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -206,27 +275,84 @@ def project_permission(permission_kind:ProjectPermission,project_id: int,assign_
 
 @app.post("/projects/{project_id}/permission/read", tags=["projects"])
 def read_project_permission(project_id: int,assign_user_id:int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
-    return project_permission(ProjectPermission.READ, project_id, assign_user_id,current_user_id, session)
+    return project_permission_give(ProjectPermission.READ, project_id, assign_user_id, current_user_id, session)
 
 @app.post("/projects/{project_id}/permission/update", tags=["projects"])
 def update_project_permission(project_id: int,assign_user_id:int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
-    return project_permission(ProjectPermission.UPDATE, project_id, assign_user_id, current_user_id,session)
+    return project_permission_give(ProjectPermission.UPDATE, project_id, assign_user_id, current_user_id, session)
 
 @app.post("/projects/{project_id}/permission/delete", tags=["projects"])
 def delete_project_permission(project_id: int,assign_user_id:int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
-    return project_permission(ProjectPermission.DELETE, project_id, assign_user_id,current_user_id,session)
+    return project_permission_give(ProjectPermission.DELETE, project_id, assign_user_id, current_user_id, session)
 
 @app.post("/projects/{project_id}/permission/manage_read", tags=["projects"])
 def manage_read_project_permission(project_id: int, assign_user_id: int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
-    return project_permission(ProjectPermission.MANAGE_READ, project_id, assign_user_id,current_user_id,session)
+    return project_permission_give(ProjectPermission.MANAGE_READ, project_id, assign_user_id, current_user_id, session)
 
 @app.post("/projects/{project_id}/permission/manage_update", tags=["projects"])
 def manage_update_project_permission(project_id: int, assign_user_id: int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
-    return project_permission(ProjectPermission.MANAGE_UPDATE, project_id, assign_user_id,current_user_id,session)
+    return project_permission_give(ProjectPermission.MANAGE_UPDATE, project_id, assign_user_id, current_user_id, session)
 
 @app.post("/projects/{project_id}/permission/manage_delete", tags=["projects"])
 def manage_delete_project_permission(project_id: int, assign_user_id: int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
-    return project_permission(ProjectPermission.MANAGE_DELETE, project_id, assign_user_id,current_user_id,session)
+    return project_permission_give(ProjectPermission.MANAGE_DELETE, project_id, assign_user_id, current_user_id, session)
+
+def project_permission_deprivation(permission_kind:ProjectPermission, project_id: int, assign_user_id:int, current_user_id: int, session: Session = Depends(get_session)):
+    project = session.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    match permission_kind:
+        case ProjectPermission.READ:
+            check_project_manage_read_permission(project_id, current_user_id, session)
+        case ProjectPermission.UPDATE:
+            check_project_manage_update_permission(project_id, current_user_id, session)
+        case ProjectPermission.DELETE:
+            check_project_manage_delete_permission(project_id, current_user_id, session)
+        case ProjectPermission.MANAGE_READ | ProjectPermission.MANAGE_UPDATE | ProjectPermission.MANAGE_DELETE:
+            check_project_owner_permission(project_id, current_user_id, session)
+
+    assign_user=session.get(User, assign_user_id)
+    if not assign_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    link = session.exec(select(ProjectUserLink).where(ProjectUserLink.user_id == assign_user_id,
+                                                      ProjectUserLink.project_id == project_id)).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="User does not have permission for this project")
+
+    if permission_kind not in link.permission:
+        return {"detail": "User does not have this permission"}
+
+    link.permission.remove(permission_kind)
+
+    session.commit()
+    session.refresh(link)
+    return {"detail": "Permission removed"}
+
+@app.delete("/projects/{project_id}/permission/read", tags=["projects"])
+def read_project_permission_deprivation(project_id: int,assign_user_id:int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission_deprivation(ProjectPermission.READ, project_id, assign_user_id, current_user_id, session)
+
+@app.delete("/projects/{project_id}/permission/update", tags=["projects"])
+def update_project_permission_deprivation(project_id: int,assign_user_id:int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission_deprivation(ProjectPermission.UPDATE, project_id, assign_user_id, current_user_id, session)
+
+@app.delete("/projects/{project_id}/permission/delete", tags=["projects"])
+def delete_project_permission_deprivation(project_id: int,assign_user_id:int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission_deprivation(ProjectPermission.DELETE, project_id, assign_user_id, current_user_id, session)
+
+
+@app.delete("/projects/{project_id}/permission/manage_read", tags=["projects"])
+def manage_read_project_permission_deprivation(project_id: int, assign_user_id: int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission_deprivation(ProjectPermission.MANAGE_READ, project_id, assign_user_id, current_user_id, session)
+
+@app.delete("/projects/{project_id}/permission/manage_update", tags=["projects"])
+def manage_update_project_permission_deprivation(project_id: int, assign_user_id: int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission_deprivation(ProjectPermission.MANAGE_UPDATE, project_id, assign_user_id, current_user_id, session)
+
+@app.delete("/projects/{project_id}/permission/manage_delete", tags=["projects"])
+def manage_delete_project_permission_deprivation(project_id: int, assign_user_id: int, session: Session = Depends(get_session),current_user_id=Depends(get_user_id_from_token)):
+    return project_permission_deprivation(ProjectPermission.MANAGE_DELETE, project_id, assign_user_id, current_user_id, session)
+
 
 
 @app.post("/projects/{project_id}/memos", response_model=MemoRead,tags=["memos"])

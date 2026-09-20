@@ -15,6 +15,7 @@ def check_project_permission(project_id: int, user_id: int, session: Session):
 
     return link
 
+
 def check_project_read_permission(project_id: int, user_id: int, session: Session):
     project=session.get(Project, project_id)
     if not project:

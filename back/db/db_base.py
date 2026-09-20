@@ -22,6 +22,7 @@ class ProjectPermission(str, Enum):
     MANAGE_UPDATE="manage_update"
     MANAGE_DELETE="manage_delete"
     OWNER="owner"
+    STAR="star"
 
 class ProjectExit(str, Enum):
     PRIVATE = "private"
