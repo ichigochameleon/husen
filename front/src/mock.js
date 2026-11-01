@@ -36,3 +36,42 @@ const projects = [
     mainchat_url:"https://annnai"
   },
 ];
+
+const memo = [
+  {
+    id: 1,
+    name: "案内方法について",
+    kinds: "案",
+    others_kinds: "",
+    text: "案内板に方向を表示するか検討する",
+    project_id: 1,
+    progress: 1,
+  },
+  {
+    id: 2,
+    name: "通信方式",
+    kinds: "技術",
+    others_kinds: "",
+    text: "micro:bit間の通信方式を検討中",
+    project_id: 1,
+    progress: 2,
+  },
+  {
+    id: 3,
+    name: "実証実験",
+    kinds: "実験",
+    others_kinds: "",
+    text: "実際の校内で案内システムを試験する",
+    project_id: 1,
+    progress: 0,
+  },
+  {
+    id: 4,
+    name: "最終仕様",
+    kinds: "結論",
+    others_kinds: "",
+    text: "システムの仕様を確定した",
+    project_id: 1,
+    progress: 3,
+  },
+];
