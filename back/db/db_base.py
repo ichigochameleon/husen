@@ -88,7 +88,6 @@ class ProjectBase(SQLModel):
     mainchat_url: Optional[str] = None
     mainrepo_url: Optional[str] = None
     others_url: List[str] = Field(default_factory=list, sa_type=JSON)
-    status: ProgressStatus
     project_exist:ProjectExit=Field(default=ProjectExit.PRIVATE)
 
 class ProjectCreate(ProjectBase):
@@ -103,7 +102,6 @@ class ProjectUpdate(SQLModel):
     mainchat_url: Optional[str] = None
     mainrepo_url: Optional[str] = None
     others_url: Optional[List[str]] = None
-    status: Optional[ProgressStatus] = None
     project_exist: Optional[ProjectExit]= None
 
 class Project(ProjectBase, table=True):
@@ -121,6 +119,7 @@ class MemoBase(SQLModel):
     kinds: Optional[int] = Field(index=True, default=None)
     other_kinds: Optional[str] = Field(default=None)
     text: Optional[str] = Field(index=False, default=None)
+    status: ProgressStatus
 
 class MemoCreate(MemoBase):
     pass
@@ -136,6 +135,7 @@ class MemoUpdate(SQLModel):
     kinds: Optional[int] = None
     other_kinds: Optional[str] = None
     text: Optional[str] = None
+    status: Optional[ProgressStatus] = None
 
 class Memo(MemoBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -146,7 +146,6 @@ class Memo(MemoBase, table=True):
     project: "Project" = Relationship(back_populates="memos")
     user: "User" = Relationship(back_populates="memos")
     chats: List["Chat"] = Relationship(back_populates="memo",sa_relationship_kwargs={"cascade": "all, delete-orphan"})
-
     created_at: datetime = Field(default_factory=datetime_now)
 
 

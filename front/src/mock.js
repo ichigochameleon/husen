@@ -1,4 +1,4 @@
-const projects = [
+export const projects = [
   {
     id: 1,
     name: "テスト文化祭案内システム",
@@ -37,7 +37,7 @@ const projects = [
   },
 ];
 
-const memo = [
+export const memo = [
   {
     id: 1,
     name: "案内方法について",

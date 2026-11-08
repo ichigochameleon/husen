@@ -3,11 +3,13 @@ import {
   Routes,
   Route,
   Link,
+  Navigate,
   useParams,
   useLocation,
 } from "react-router-dom";
 import React, {useEffect, useState} from "react";
-
+import {projects} from "./mock.js";
+import {memo} from "./mock.js";
 
 
 function Layout({ children }) {
@@ -167,19 +169,23 @@ function Home() {
 
   const [text,setText]=useState('');
 
-  const send_text=async ()=> {
+  const send_text=async (name)=> {
 
     setError(null);
     try {
       const res = await fetch(serverUrl + "/" + "projects/", {
         method: 'post',
         headers: {'Content-Type': 'application/json',},
-        body: JSON.stringify(textData)
+        body: JSON.stringify({
+          name,
+        })
       });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status} ${res.statusText}`);
       }
       const data = await res.json();
+      setProjects((currentProjects) => [...currentProjects, data]);
+      setText('');
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
       setError(e instanceof Error ? e.message : String(e));
@@ -193,8 +199,7 @@ function Home() {
         const textData=e.currentTarget.value;
 
         if (textData.trim() === '') return;
-        setText('');
-        send_text();
+        send_text(textData.trim());
 
       }
 
@@ -307,7 +312,7 @@ function Home() {
           ))}
 
         </div>
-        <textarea className="textarea textarea-bordered fixed bottom-4 right-4 z-50 w-64 h-24 shadow-lg"  placeholder="NewHusen" onKeyDown={handlekeydown} onChange={(e)=>setText(e.target.value)}></textarea>
+        <textarea className="textarea textarea-bordered fixed bottom-4 right-4 z-50 w-64 h-24 shadow-lg"  placeholder="新しいプロジェクト" value={text} onKeyDown={handlekeydown} onChange={(e)=>setText(e.target.value)}></textarea>
       </div>
     </main>
   );
@@ -320,7 +325,7 @@ function Home() {
 
 function ProjectDetail() {
   const { id } = useParams();
-
+  console.log(id);
   const project = projects.find(
     (project) => project.id === Number(id)
   );
@@ -383,7 +388,58 @@ function ProjectDetail() {
           <button className="btn join-item">
             検索
           </button>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 
+          {memo.map((memo) => (
+            <Link
+              key={memo.id}
+              to={`/projects/${project.id}`}
+              className="card bg-base-200 shadow-sm transition hover:shadow-md"
+            >
+              <div className="card-body">
+
+                <h2 className="card-title">
+                  {pr.name}
+                </h2>
+
+                <p className="text-base-content/70">
+                  {project.overview}
+                </p>
+
+                {/* Status */}
+                <div className="mt-4 flex gap-5">
+
+                  <div className="flex items-center gap-2">
+                    <div
+                      aria-label="結論"
+                      className="status status-success"
+                    />
+                    <span>{project.conclusion}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div
+                      aria-label="途中経過"
+                      className="status status-warning"
+                    />
+                    <span>{project.progress}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div
+                      aria-label="未結論"
+                      className="status status-error"
+                    />
+                    <span>{project.unresolved}</span>
+                  </div>
+
+                </div>
+
+              </div>
+            </Link>
+          ))}
+
+        </div>
         </div>
       </div>
       {unresolve_projectmemos.map((item) => (
@@ -422,11 +478,9 @@ function App() {
     <BrowserRouter>
       <Layout>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route
-            path="/projects/:id"
-            element={<ProjectDetail />}
-          />
+          <Route path="/" element={<Navigate to="/projects/" replace />} />
+          <Route path="/projects/" element={<Home />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
         </Routes>
       </Layout>
     </BrowserRouter>
