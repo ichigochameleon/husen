@@ -166,6 +166,26 @@ function Home() {
 
 
   const [text,setText]=useState('');
+
+  const send_text=async ()=> {
+
+    setError(null);
+    try {
+      const res = await fetch(serverUrl + "/" + "projects/", {
+        method: 'post',
+        headers: {'Content-Type': 'application/json',},
+        body: JSON.stringify(textData)
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      }
+      const data = await res.json();
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   const handlekeydown=(e)=>{
     if (e.key === 'Enter' && !e.nativeEvent.isComposing){
       if (!e.shiftKey){
@@ -173,8 +193,11 @@ function Home() {
         const textData=e.currentTarget.value;
 
         if (textData.trim() === '') return;
+        setText('');
+        send_text();
 
       }
+
     }
   }
 
@@ -284,7 +307,7 @@ function Home() {
           ))}
 
         </div>
-        <textarea className="textarea textarea-bordered fixed bottom-4 right-4 z-50 w-64 h-24 shadow-lg"  placeholder="NewHusen"></textarea>
+        <textarea className="textarea textarea-bordered fixed bottom-4 right-4 z-50 w-64 h-24 shadow-lg"  placeholder="NewHusen" onKeyDown={handlekeydown} onChange={(e)=>setText(e.target.value)}></textarea>
       </div>
     </main>
   );
